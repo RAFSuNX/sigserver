@@ -1,0 +1,11 @@
+services:
+  live-sys-stats:
+    build: .
+    ports:
+      - "8080:8080"
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/proc:ro
+      - /sys:/sys:ro
+    restart: unless-stopped

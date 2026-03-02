@@ -109,7 +109,7 @@ func startTunnel(ctx context.Context) {
 	}()
 }
 
-func scanTunnelURL(_ context.Context, r io.Reader) {
+func scanTunnelURL(ctx context.Context, r io.Reader) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -117,12 +117,17 @@ func scanTunnelURL(_ context.Context, r io.Reader) {
 			continue
 		}
 		for _, field := range strings.Fields(line) {
-			field = strings.Trim(field, "|")
+			// Trim pipe chars (table format) and quotes/punctuation (JSON format)
+			field = strings.Trim(field, `|"',()`)
 			if strings.HasPrefix(field, "https://") && strings.Contains(field, "trycloudflare.com") {
 				printEmbedCode(field + "/sig.png")
 				return
 			}
 		}
+	}
+	// If context was not cancelled, scanner ended without finding the URL
+	if ctx.Err() == nil {
+		log.Println("tunnel: URL not found in cloudflared output")
 	}
 }
 

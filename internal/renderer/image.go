@@ -37,12 +37,15 @@ func Render(s stats.Stats) ([]byte, error) {
 	drawHLine(img, 10, imgW-10, 28, dimColor)
 
 	// Stats rows
-	freqStr := "N/A"
+	cpuDetail := s.CPUModel
 	if s.CPUFreqGHz > 0 {
-		freqStr = fmt.Sprintf("%.2f GHz", s.CPUFreqGHz)
+		cpuDetail = fmt.Sprintf("%.2f GHz", s.CPUFreqGHz)
+	}
+	if cpuDetail == "" {
+		cpuDetail = "N/A"
 	}
 	drawText(img, fmt.Sprintf("CPU   %5.1f%%  @  %s    load: %.2f  %.2f  %.2f",
-		s.CPUPercent, freqStr, s.LoadAvg[0], s.LoadAvg[1], s.LoadAvg[2]),
+		s.CPUPercent, cpuDetail, s.LoadAvg[0], s.LoadAvg[1], s.LoadAvg[2]),
 		10, 48, textColor)
 
 	drawText(img, fmt.Sprintf("RAM   %.1f / %.1f GB",

@@ -3,6 +3,7 @@ package stats
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -18,6 +19,7 @@ type Stats struct {
 	Hostname    string
 	CPUPercent  float64
 	CPUFreqGHz  float64
+	CPUModel    string
 	LoadAvg     [3]float64
 	RAMUsedGB   float64
 	RAMTotalGB  float64
@@ -56,11 +58,16 @@ func (c *Collector) Collect() (*Stats, error) {
 		cpuPct = percents[0]
 	}
 
-	// CPU frequency (nominal base clock from /proc/cpuinfo)
+	// CPU frequency + model name
 	freqs, _ := cpu.Info()
 	cpuFreqGHz := 0.0
+	cpuModel := ""
 	if len(freqs) > 0 {
 		cpuFreqGHz = freqs[0].Mhz / 1000.0
+		cpuModel = freqs[0].ModelName
+	}
+	if cpuModel == "" {
+		cpuModel = cpuModelFromProcInfo()
 	}
 
 	// Load average
@@ -139,6 +146,7 @@ func (c *Collector) Collect() (*Stats, error) {
 		Hostname:    hostname,
 		CPUPercent:  cpuPct,
 		CPUFreqGHz:  cpuFreqGHz,
+		CPUModel:    cpuModel,
 		LoadAvg:     [3]float64{avg.Load1, avg.Load5, avg.Load15},
 		RAMUsedGB:   float64(vmem.Used) / 1024 / 1024 / 1024,
 		RAMTotalGB:  float64(vmem.Total) / 1024 / 1024 / 1024,
@@ -148,6 +156,56 @@ func (c *Collector) Collect() (*Stats, error) {
 		NetDownMBps: netDownMBps,
 		UptimeStr:   uptimeStr,
 	}, nil
+}
+
+// cpuModelFromProcInfo decodes ARM CPU implementer+part from /proc/cpuinfo.
+func cpuModelFromProcInfo() string {
+	data, err := os.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return ""
+	}
+	var implementer, part string
+	for _, line := range strings.Split(string(data), "\n") {
+		if k, v, ok := strings.Cut(line, ":"); ok {
+			k = strings.TrimSpace(k)
+			v = strings.TrimSpace(v)
+			switch k {
+			case "CPU implementer":
+				implementer = v
+			case "CPU part":
+				part = v
+			}
+		}
+		if implementer != "" && part != "" {
+			break
+		}
+	}
+	// ARM Ltd (0x41) part lookup
+	if implementer == "0x41" {
+		armParts := map[string]string{
+			"0xd03": "Cortex-A53",
+			"0xd04": "Cortex-A35",
+			"0xd05": "Cortex-A55",
+			"0xd07": "Cortex-A57",
+			"0xd08": "Cortex-A72",
+			"0xd09": "Cortex-A73",
+			"0xd0a": "Cortex-A75",
+			"0xd0b": "Cortex-A76",
+			"0xd0c": "Neoverse N1",
+			"0xd0d": "Cortex-A77",
+			"0xd40": "Neoverse V1",
+			"0xd41": "Cortex-A78",
+			"0xd49": "Neoverse N2",
+			"0xd4a": "Neoverse E1",
+		}
+		if name, ok := armParts[part]; ok {
+			return name
+		}
+	}
+	if implementer != "" && part != "" {
+		return fmt.Sprintf("ARM %s/%s", implementer, part)
+	}
+	return ""
 }
 
 // FormatUptime formats total seconds as d:hh:mm:ss.

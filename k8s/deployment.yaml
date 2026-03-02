@@ -19,6 +19,7 @@ spec:
       containers:
         - name: sigserver
           image: ghcr.io/rafsunx/sigserver:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           securityContext:

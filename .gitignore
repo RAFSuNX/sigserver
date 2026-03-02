@@ -1,0 +1,5 @@
+# Binary output
+live-sys-stats
+
+# Playwright MCP artifacts (browser automation screenshots, etc.)
+.playwright-mcp/

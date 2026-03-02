@@ -31,6 +31,8 @@ func (b *Broker) Unsubscribe(ch chan []byte) {
 }
 
 // Publish sends a frame to all subscribers, dropping slow clients.
+// Callers must not mutate frame after calling Publish, as the same
+// slice is shared with all subscriber goroutines.
 func (b *Broker) Publish(frame []byte) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

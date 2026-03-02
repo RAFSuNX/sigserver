@@ -41,7 +41,10 @@ func NewCollector() *Collector {
 
 // Collect reads all system stats and returns a Stats snapshot.
 func (c *Collector) Collect() (*Stats, error) {
-	hostname, _ := os.Hostname()
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, fmt.Errorf("hostname: %w", err)
+	}
 
 	// CPU percent (100ms interval for accuracy)
 	percents, err := cpu.Percent(100*time.Millisecond, false)
@@ -53,7 +56,7 @@ func (c *Collector) Collect() (*Stats, error) {
 		cpuPct = percents[0]
 	}
 
-	// CPU frequency
+	// CPU frequency (nominal base clock from /proc/cpuinfo)
 	freqs, _ := cpu.Info()
 	cpuFreqGHz := 0.0
 	if len(freqs) > 0 {
@@ -82,14 +85,19 @@ func (c *Collector) Collect() (*Stats, error) {
 	netCounters, err := psnet.IOCounters(false)
 	netUpMBps, netDownMBps := 0.0, 0.0
 	now := time.Now()
-	if err == nil && len(netCounters) > 0 {
+	if err != nil || len(netCounters) == 0 {
+		c.prevNetTime = time.Time{} // force re-prime on next success
+	} else {
 		sent := netCounters[0].BytesSent
 		recv := netCounters[0].BytesRecv
 		if !c.prevNetTime.IsZero() {
 			elapsed := now.Sub(c.prevNetTime).Seconds()
 			if elapsed > 0 {
-				netUpMBps = float64(sent-c.prevNetBytes[0]) / elapsed / 1024 / 1024
-				netDownMBps = float64(recv-c.prevNetBytes[1]) / elapsed / 1024 / 1024
+				// guard against counter reset/wraparound
+				if sent >= c.prevNetBytes[0] && recv >= c.prevNetBytes[1] {
+					netUpMBps = float64(sent-c.prevNetBytes[0]) / elapsed / 1024 / 1024
+					netDownMBps = float64(recv-c.prevNetBytes[1]) / elapsed / 1024 / 1024
+				}
 			}
 		}
 		c.prevNetBytes = [2]uint64{sent, recv}

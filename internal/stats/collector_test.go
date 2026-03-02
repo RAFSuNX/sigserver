@@ -2,6 +2,7 @@ package stats_test
 
 import (
 	"testing"
+	"time"
 	"live-sys-stats/internal/stats"
 )
 
@@ -32,18 +33,27 @@ func TestCollectorReturnsValidStats(t *testing.T) {
 
 func TestNetworkRateOnSecondCall(t *testing.T) {
 	c := stats.NewCollector()
-	c.Collect() // prime the previous sample
+	if _, err := c.Collect(); err != nil {
+		t.Fatalf("prime call failed: %v", err)
+	}
+
+	time.Sleep(200 * time.Millisecond)
 
 	s, err := c.Collect()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// rates should be non-negative after second call
 	if s.NetUpMBps < 0 {
 		t.Errorf("net up rate should be >= 0, got %f", s.NetUpMBps)
 	}
 	if s.NetDownMBps < 0 {
 		t.Errorf("net down rate should be >= 0, got %f", s.NetDownMBps)
+	}
+	if s.NetUpMBps > 10000 {
+		t.Errorf("net up rate suspiciously high (counter underflow?): %f", s.NetUpMBps)
+	}
+	if s.NetDownMBps > 10000 {
+		t.Errorf("net down rate suspiciously high (counter underflow?): %f", s.NetDownMBps)
 	}
 }

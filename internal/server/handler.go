@@ -36,9 +36,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		case frame := <-ch:
-			fmt.Fprintf(w, "--%s\r\nContent-Type: image/png\r\nContent-Length: %d\r\n\r\n", boundary, len(frame))
-			w.Write(frame)
-			fmt.Fprintf(w, "\r\n")
+			if _, err := fmt.Fprintf(w, "--%s\r\nContent-Type: image/png\r\nContent-Length: %d\r\n\r\n", boundary, len(frame)); err != nil {
+				return
+			}
+			if _, err := w.Write(frame); err != nil {
+				return
+			}
+			if _, err := fmt.Fprintf(w, "\r\n"); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}

@@ -28,7 +28,7 @@ var (
 )
 
 // Render draws a stats snapshot onto a 600x160 PNG and returns the bytes.
-func Render(s *stats.Stats) ([]byte, error) {
+func Render(s stats.Stats) ([]byte, error) {
 	img := image.NewRGBA(image.Rect(0, 0, imgW, imgH))
 	draw.Draw(img, img.Bounds(), image.NewUniform(bgColor), image.Point{}, draw.Src)
 

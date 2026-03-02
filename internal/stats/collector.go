@@ -82,11 +82,35 @@ func (c *Collector) Collect() (*Stats, error) {
 		return nil, fmt.Errorf("memory: %w", err)
 	}
 
-	// Disk — show /mnt/storage only
+	// Disk — sum every real partition visible (host mount namespace via /proc/1)
+	virtualFS := map[string]bool{
+		"tmpfs": true, "devtmpfs": true, "sysfs": true, "proc": true,
+		"devpts": true, "cgroup": true, "cgroup2": true, "pstore": true,
+		"mqueue": true, "hugetlbfs": true, "debugfs": true, "tracefs": true,
+		"securityfs": true, "configfs": true, "fusectl": true, "bpf": true,
+		"efivarfs": true, "squashfs": true, "overlay": true, "ramfs": true,
+		"autofs": true, "nsfs": true,
+	}
 	var diskUsedBytes, diskTotalBytes uint64
-	if u, derr := disk.Usage("/mnt/storage"); derr == nil {
-		diskUsedBytes = u.Used
-		diskTotalBytes = u.Total
+	parts, err := disk.Partitions(true)
+	if err != nil {
+		return nil, fmt.Errorf("disk partitions: %w", err)
+	}
+	seenDev := map[string]bool{}
+	for _, p := range parts {
+		if virtualFS[p.Fstype] {
+			continue
+		}
+		if seenDev[p.Device] {
+			continue
+		}
+		seenDev[p.Device] = true
+		u, derr := disk.Usage(p.Mountpoint)
+		if derr != nil {
+			continue
+		}
+		diskUsedBytes += u.Used
+		diskTotalBytes += u.Total
 	}
 
 	// Network rate

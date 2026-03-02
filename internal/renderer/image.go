@@ -18,11 +18,11 @@ const (
 	imgW = 600
 	imgH = 300
 
-	lx   = 24  // left margin
-	barX = 95  // bar left edge
-	barW = 260 // bar width
+	lx   = 0   // left margin
+	barX = 71  // bar left edge
+	barW = 284 // bar width
 	barH = 12  // bar height
-	vx   = 368 // value text x (barX + barW + 13)
+	vx   = 358 // value text x (barX + barW + 3)
 )
 
 var (

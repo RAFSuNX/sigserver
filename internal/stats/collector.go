@@ -102,6 +102,15 @@ func (c *Collector) Collect() (*Stats, error) {
 		if virtualFS[p.Fstype] {
 			continue
 		}
+		mp := p.Mountpoint
+		if strings.HasPrefix(mp, "/var/") ||
+			strings.HasPrefix(mp, "/run/") ||
+			strings.HasPrefix(mp, "/boot") ||
+			strings.HasPrefix(mp, "/sys/") ||
+			strings.HasPrefix(mp, "/dev/") ||
+			strings.HasPrefix(mp, "/proc/") {
+			continue
+		}
 		if seenDev[p.Device] {
 			continue
 		}

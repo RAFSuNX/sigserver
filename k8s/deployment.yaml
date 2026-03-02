@@ -22,6 +22,13 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          env:
+            - name: DISK_TOTAL_GB
+              valueFrom:
+                secretKeyRef:
+                  name: sigserver-secret
+                  key: disk_total_gb
+                  optional: true
           securityContext:
             privileged: true
           volumeMounts:

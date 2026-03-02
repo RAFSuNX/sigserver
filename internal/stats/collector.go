@@ -3,6 +3,7 @@ package stats
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -152,7 +153,7 @@ func (c *Collector) Collect() (*Stats, error) {
 		RAMUsedGB:   float64(vmem.Used) / 1024 / 1024 / 1024,
 		RAMTotalGB:  float64(vmem.Total) / 1024 / 1024 / 1024,
 		DiskUsedGB:  float64(diskUsedBytes) / 1024 / 1024 / 1024,
-		DiskTotalGB: float64(diskTotalBytes) / 1024 / 1024 / 1024,
+		DiskTotalGB: diskTotalGB(diskTotalBytes),
 		NetUpMBps:   netUpMBps,
 		NetDownMBps: netDownMBps,
 		UptimeStr:   uptimeStr,
@@ -207,6 +208,15 @@ func cpuModelFromProcInfo() string {
 		return fmt.Sprintf("ARM %s/%s", implementer, part)
 	}
 	return ""
+}
+
+func diskTotalGB(detectedBytes uint64) float64 {
+	if v := os.Getenv("DISK_TOTAL_GB"); v != "" {
+		if gb, err := strconv.ParseFloat(v, 64); err == nil && gb > 0 {
+			return gb
+		}
+	}
+	return float64(detectedBytes) / 1024 / 1024 / 1024
 }
 
 // FormatUptime formats total seconds as d:hh:mm:ss.

@@ -28,6 +28,9 @@ spec:
             - name: sys
               mountPath: /sys
               readOnly: true
+            - name: storage
+              mountPath: /mnt/storage
+              readOnly: true
       volumes:
         - name: proc
           hostPath:
@@ -35,3 +38,6 @@ spec:
         - name: sys
           hostPath:
             path: /sys
+        - name: storage
+          hostPath:
+            path: /mnt/storage

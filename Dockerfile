@@ -1,3 +1,6 @@
+# Get cloudflared binary
+FROM cloudflare/cloudflared:latest AS cloudflared
+
 # Build stage
 FROM golang:1.25-alpine AS builder
 WORKDIR /app
@@ -11,6 +14,7 @@ FROM alpine:3.19
 WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=builder /app/live-sys-stats .
+COPY --from=cloudflared /usr/local/bin/cloudflared /usr/local/bin/cloudflared
 EXPOSE 8080
 USER appuser
 ENTRYPOINT ["./live-sys-stats"]

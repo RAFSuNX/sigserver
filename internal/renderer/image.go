@@ -15,59 +15,124 @@ import (
 )
 
 const (
-	imgW = 600
-	imgH = 160
+	imgW = 700
+	imgH = 300
+
+	lx   = 24  // left margin
+	barX = 95  // bar left edge
+	barW = 360 // bar width
+	barH = 12  // bar height
+	vx   = 468 // value text x (barX + barW + 13)
 )
 
 var (
-	textColor   = color.RGBA{R: 224, G: 224, B: 224, A: 255} // #e0e0e0
-	accentColor = color.RGBA{R: 217, G: 119, B: 6, A: 255}   // #d97706
-	dimColor    = color.RGBA{R: 100, G: 100, B: 100, A: 255} // dim separator
+	textColor  = color.RGBA{R: 224, G: 224, B: 224, A: 255} // #e0e0e0
+	accent     = color.RGBA{R: 217, G: 119, B: 6, A: 255}   // #d97706 orange
+	dimColor   = color.RGBA{R: 100, G: 100, B: 100, A: 255} // #646464
+	subColor   = color.RGBA{R: 156, G: 163, B: 175, A: 255} // #9ca3af
+	barBgColor = color.RGBA{R: 45, G: 45, B: 45, A: 210}    // bar track
+	barFill    = color.RGBA{R: 217, G: 119, B: 6, A: 255}   // orange fill
+	barHot     = color.RGBA{R: 239, G: 68, B: 68, A: 255}   // red >90%
+	green      = color.RGBA{R: 34, G: 197, B: 94, A: 255}   // #22c55e
+	blue       = color.RGBA{R: 96, G: 165, B: 250, A: 255}  // #60a5fa
 )
 
-// Render draws a stats snapshot onto a 600x160 PNG and returns the bytes.
+// Render draws a stats snapshot onto a 700x300 transparent PNG.
 func Render(s stats.Stats) ([]byte, error) {
 	img := image.NewRGBA(image.Rect(0, 0, imgW, imgH))
-	// image.NewRGBA zero-initializes all pixels to (0,0,0,0) — transparent
+	// image.NewRGBA zero-initialises to (0,0,0,0) — transparent
 
-	// Hostname header in orange
-	drawText(img, s.Hostname, 10, 20, accentColor)
+	// ── Header ────────────────────────────────────────────────────────
+	fillRect(img, lx, 21, 7, 7, accent) // accent square
+	drawText(img, " "+s.Hostname, lx+7, 30, accent)
 
-	// Separator line
-	drawHLine(img, 10, imgW-10, 28, dimColor)
-
-	// Stats rows
-	cpuDetail := s.CPUModel
+	cpuInfo := s.CPUModel
 	if s.CPUFreqGHz > 0 {
-		cpuDetail = fmt.Sprintf("%.2f GHz", s.CPUFreqGHz)
+		cpuInfo = fmt.Sprintf("%.2f GHz", s.CPUFreqGHz)
 	}
-	if cpuDetail == "" {
-		cpuDetail = "N/A"
+	if cpuInfo != "" {
+		drawTextRight(img, cpuInfo, imgW-lx, 30, subColor)
 	}
-	drawText(img, fmt.Sprintf("CPU   %5.1f%%  @  %s    load: %.2f  %.2f  %.2f",
-		s.CPUPercent, cpuDetail, s.LoadAvg[0], s.LoadAvg[1], s.LoadAvg[2]),
-		10, 48, textColor)
 
-	drawText(img, fmt.Sprintf("RAM   %.1f / %.1f GB",
-		s.RAMUsedGB, s.RAMTotalGB),
-		10, 68, textColor)
+	// 2px orange separator
+	fillRect(img, lx, 40, imgW-lx*2, 2, accent)
 
-	drawText(img, fmt.Sprintf("DISK  %.1f / %.1f GB",
-		s.DiskUsedGB, s.DiskTotalGB),
-		10, 88, textColor)
+	// ── CPU (bar centre y=67) ──────────────────────────────────────────
+	drawText(img, "CPU", lx, 72, accent)
+	drawBar(img, barX, 61, barW, barH, s.CPUPercent/100.0)
+	drawText(img, fmt.Sprintf("%.1f%%", s.CPUPercent), vx, 72, textColor)
+	loadStr := fmt.Sprintf("load  %.2f  %.2f  %.2f", s.LoadAvg[0], s.LoadAvg[1], s.LoadAvg[2])
+	drawTextRight(img, loadStr, imgW-lx, 72, subColor)
 
-	drawText(img, fmt.Sprintf("NET   up %.2f MB/s    down %.2f MB/s",
-		s.NetUpMBps, s.NetDownMBps),
-		10, 108, textColor)
+	// ── RAM (bar centre y=104) ─────────────────────────────────────────
+	drawText(img, "RAM", lx, 109, accent)
+	ramPct := 0.0
+	if s.RAMTotalGB > 0 {
+		ramPct = s.RAMUsedGB / s.RAMTotalGB
+	}
+	drawBar(img, barX, 98, barW, barH, ramPct)
+	drawText(img, fmt.Sprintf("%.1f / %.1f GB", s.RAMUsedGB, s.RAMTotalGB), vx, 109, textColor)
 
-	drawText(img, fmt.Sprintf("UP    %s", s.UptimeStr),
-		10, 128, textColor)
+	// ── DISK (bar centre y=141) ────────────────────────────────────────
+	drawText(img, "DSK", lx, 146, accent)
+	diskPct := 0.0
+	if s.DiskTotalGB > 0 {
+		diskPct = s.DiskUsedGB / s.DiskTotalGB
+	}
+	drawBar(img, barX, 135, barW, barH, diskPct)
+	drawText(img, fmt.Sprintf("%.0f / %.0f GB", s.DiskUsedGB, s.DiskTotalGB), vx, 146, textColor)
+
+	// ── Dim separator ─────────────────────────────────────────────────
+	fillRect(img, lx, 165, imgW-lx*2, 1, dimColor)
+
+	// ── NET ───────────────────────────────────────────────────────────
+	drawText(img, "NET", lx, 193, accent)
+	drawTriangleUp(img, barX, 186, green)
+	drawText(img, fmt.Sprintf(" %.2f MB/s", s.NetUpMBps), barX+11, 193, textColor)
+	drawTriangleDown(img, barX+170, 186, blue)
+	drawText(img, fmt.Sprintf(" %.2f MB/s", s.NetDownMBps), barX+181, 193, textColor)
+
+	// ── UPTIME ────────────────────────────────────────────────────────
+	drawText(img, "UP", lx, 228, accent)
+	drawText(img, s.UptimeStr, barX, 228, textColor)
+
+	// ── Dim separator ─────────────────────────────────────────────────
+	fillRect(img, lx, 248, imgW-lx*2, 1, dimColor)
+
+	// ── Footer ────────────────────────────────────────────────────────
+	fillRect(img, lx, 262, 7, 7, green) // green live indicator
+	drawText(img, " LIVE", lx+7, 271, green)
 
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func drawBar(img *image.RGBA, x, y, w, h int, pct float64) {
+	fillRect(img, x, y, w, h, barBgColor)
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 1 {
+		pct = 1
+	}
+	if fill := int(float64(w) * pct); fill > 0 {
+		fc := barFill
+		if pct >= 0.9 {
+			fc = barHot
+		}
+		fillRect(img, x, y, fill, h, fc)
+	}
+}
+
+func fillRect(img *image.RGBA, x, y, w, h int, clr color.Color) {
+	for dy := 0; dy < h; dy++ {
+		for dx := 0; dx < w; dx++ {
+			img.Set(x+dx, y+dy, clr)
+		}
+	}
 }
 
 func drawText(img *image.RGBA, text string, x, y int, clr color.Color) {
@@ -80,8 +145,28 @@ func drawText(img *image.RGBA, text string, x, y int, clr color.Color) {
 	d.DrawString(text)
 }
 
-func drawHLine(img *image.RGBA, x0, x1, y int, clr color.Color) {
-	for x := x0; x <= x1; x++ {
-		img.Set(x, y, clr)
+// drawTextRight right-aligns text so its right edge is at rightX.
+func drawTextRight(img *image.RGBA, text string, rightX, y int, clr color.Color) {
+	drawText(img, text, rightX-len(text)*7, y, clr)
+}
+
+// drawTriangleUp draws a 9×5 upward-pointing triangle with tip at top.
+func drawTriangleUp(img *image.RGBA, x, y int, clr color.Color) {
+	for row := 0; row < 5; row++ {
+		cx := x + 4
+		for i := -row; i <= row; i++ {
+			img.Set(cx+i, y+(4-row), clr)
+		}
+	}
+}
+
+// drawTriangleDown draws a 9×5 downward-pointing triangle with tip at bottom.
+func drawTriangleDown(img *image.RGBA, x, y int, clr color.Color) {
+	for row := 0; row < 5; row++ {
+		cx := x + 4
+		half := 4 - row
+		for i := -half; i <= half; i++ {
+			img.Set(cx+i, y+row, clr)
+		}
 	}
 }

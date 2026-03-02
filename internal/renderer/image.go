@@ -110,7 +110,7 @@ func Render(s stats.Stats) ([]byte, error) {
 		diskPct = s.DiskUsedGB / s.DiskTotalGB
 	}
 	drawBar(img, barX, 128, barW, barH, diskPct)
-	drawText(img, fmt.Sprintf("%.0f/%.0fGB", s.DiskUsedGB, s.DiskTotalGB), vx, 141, textColor)
+	drawText(img, fmtDisk(s.DiskUsedGB, s.DiskTotalGB), vx, 141, textColor)
 
 	// ── Dim separator (+15 gap after disk) ────────────────────────────
 	fillRect(img, lx, 160, imgW, 1, dimColor)
@@ -189,4 +189,11 @@ func drawTriangleDown(img *image.RGBA, x, y int, clr color.Color) {
 			img.Set(cx+i, y+row, clr)
 		}
 	}
+}
+
+func fmtDisk(usedGB, totalGB float64) string {
+	if totalGB >= 1024 {
+		return fmt.Sprintf("%.1f/%.1fTB", usedGB/1024, totalGB/1024)
+	}
+	return fmt.Sprintf("%.0f/%.0fGB", usedGB, totalGB)
 }

@@ -46,27 +46,26 @@ func TestRenderReturnsPNG(t *testing.T) {
 		t.Errorf("expected 600x160, got %dx%d", bounds.Dx(), bounds.Dy())
 	}
 
-	// Verify background color at top-left corner (should be #1a1a1a)
-	r, g, b, a := img.At(0, 0).RGBA()
-	// RGBA() returns 16-bit premultiplied. Shift right 8 to get 8-bit values.
-	if r>>8 != 26 || g>>8 != 26 || b>>8 != 26 || a>>8 != 255 {
-		t.Errorf("expected background #1a1a1a at (0,0), got R:%d G:%d B:%d A:%d", r>>8, g>>8, b>>8, a>>8)
+	// Verify background is transparent at top-left corner
+	_, _, _, a := img.At(0, 0).RGBA()
+	if a != 0 {
+		t.Errorf("expected transparent background at (0,0), got alpha %d", a>>8)
 	}
 
-	// Verify at least one non-background pixel exists (text was rendered)
+	// Verify at least one non-transparent pixel exists (text was rendered)
 	anyRendered := false
 	imgBounds := img.Bounds()
 outer:
 	for py := imgBounds.Min.Y; py < imgBounds.Max.Y; py++ {
 		for px := imgBounds.Min.X; px < imgBounds.Max.X; px++ {
-			pr, pg, pb, _ := img.At(px, py).RGBA()
-			if pr>>8 != 26 || pg>>8 != 26 || pb>>8 != 26 {
+			_, _, _, pa := img.At(px, py).RGBA()
+			if pa != 0 {
 				anyRendered = true
 				break outer
 			}
 		}
 	}
 	if !anyRendered {
-		t.Error("all pixels are background color — no text was rendered")
+		t.Error("all pixels are transparent — no text was rendered")
 	}
 }

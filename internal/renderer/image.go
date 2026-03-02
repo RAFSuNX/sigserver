@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
 	"image/png"
 
 	xfont "golang.org/x/image/font"
@@ -21,7 +20,6 @@ const (
 )
 
 var (
-	bgColor     = color.RGBA{R: 26, G: 26, B: 26, A: 255}   // #1a1a1a
 	textColor   = color.RGBA{R: 224, G: 224, B: 224, A: 255} // #e0e0e0
 	accentColor = color.RGBA{R: 217, G: 119, B: 6, A: 255}   // #d97706
 	dimColor    = color.RGBA{R: 100, G: 100, B: 100, A: 255} // dim separator
@@ -30,7 +28,7 @@ var (
 // Render draws a stats snapshot onto a 600x160 PNG and returns the bytes.
 func Render(s stats.Stats) ([]byte, error) {
 	img := image.NewRGBA(image.Rect(0, 0, imgW, imgH))
-	draw.Draw(img, img.Bounds(), image.NewUniform(bgColor), image.Point{}, draw.Src)
+	// image.NewRGBA zero-initializes all pixels to (0,0,0,0) — transparent
 
 	// Hostname header in orange
 	drawText(img, s.Hostname, 10, 20, accentColor)

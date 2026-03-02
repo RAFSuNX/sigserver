@@ -14,6 +14,8 @@ spec:
         app: sigserver
     spec:
       hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: sigserver
           image: ghcr.io/rafsunx/sigserver:latest

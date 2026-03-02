@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sigserver
+  namespace: default
+spec:
+  selector:
+    app: sigserver
+  ports:
+    - port: 8080
+      targetPort: 8080

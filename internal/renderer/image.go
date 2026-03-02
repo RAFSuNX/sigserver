@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"time"
 
 	xfont "golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -43,8 +44,16 @@ func Render(s stats.Stats) ([]byte, error) {
 	// image.NewRGBA zero-initialises to (0,0,0,0) — transparent
 
 	// ── Header ────────────────────────────────────────────────────────
-	fillRect(img, lx, 21, 7, 7, accent) // accent square
-	drawText(img, " "+s.Hostname, lx+7, 30, accent)
+	// Blinking dot: visible on even seconds, hidden on odd seconds
+	dotColor := accent
+	if time.Now().Second()%2 != 0 {
+		dotColor = color.RGBA{} // transparent
+	}
+	hostnameText := s.Hostname
+	hostW := len(hostnameText) * 7
+	drawText(img, hostnameText, lx, 30, accent)
+	// dot sits 4px after hostname text
+	fillRect(img, lx+hostW+4, 23, 6, 6, dotColor)
 
 	cpuInfo := s.CPUModel
 	if s.CPUFreqGHz > 0 {
@@ -95,13 +104,6 @@ func Render(s stats.Stats) ([]byte, error) {
 	// ── UPTIME ────────────────────────────────────────────────────────
 	drawText(img, "UP", lx, 228, accent)
 	drawText(img, s.UptimeStr, barX, 228, textColor)
-
-	// ── Dim separator ─────────────────────────────────────────────────
-	fillRect(img, lx, 248, imgW-lx*2, 1, dimColor)
-
-	// ── Footer ────────────────────────────────────────────────────────
-	fillRect(img, lx, 262, 7, 7, green) // green live indicator
-	drawText(img, " LIVE", lx+7, 271, green)
 
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {

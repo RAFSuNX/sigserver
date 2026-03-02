@@ -40,6 +40,9 @@ func TestFormatUptime(t *testing.T) {
 		{7509, "0:02:05:09"},   // 0d 2h 5m 9s
 		{0, "0:00:00:00"},      // zero
 		{86400, "1:00:00:00"},  // exactly 1 day
+		{59, "0:00:00:59"},     // last second before minute rolls over
+		{3599, "0:00:59:59"},   // last second before hour rolls over
+		{86399, "0:23:59:59"},  // last second before day rolls over
 	}
 	for _, tc := range cases {
 		got := stats.FormatUptime(tc.seconds)

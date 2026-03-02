@@ -15,14 +15,14 @@ import (
 )
 
 const (
-	imgW = 700
+	imgW = 600
 	imgH = 300
 
 	lx   = 24  // left margin
 	barX = 95  // bar left edge
-	barW = 360 // bar width
+	barW = 260 // bar width
 	barH = 12  // bar height
-	vx   = 468 // value text x (barX + barW + 13)
+	vx   = 368 // value text x (barX + barW + 13)
 )
 
 var (

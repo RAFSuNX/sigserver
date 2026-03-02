@@ -42,8 +42,8 @@ func TestRenderReturnsPNG(t *testing.T) {
 	}
 
 	bounds := img.Bounds()
-	if bounds.Dx() != 700 || bounds.Dy() != 300 {
-		t.Errorf("expected 700x300, got %dx%d", bounds.Dx(), bounds.Dy())
+	if bounds.Dx() != 600 || bounds.Dy() != 300 {
+		t.Errorf("expected 600x300, got %dx%d", bounds.Dx(), bounds.Dy())
 	}
 
 	// Verify background is transparent at top-left corner

@@ -75,10 +75,34 @@ func (c *Collector) Collect() (*Stats, error) {
 		return nil, fmt.Errorf("memory: %w", err)
 	}
 
-	// Disk (root partition)
-	usage, err := disk.Usage("/")
+	// Disk (sum all real partitions, excluding virtual filesystems)
+	virtualFS := map[string]bool{
+		"tmpfs": true, "devtmpfs": true, "sysfs": true, "proc": true,
+		"devpts": true, "cgroup": true, "cgroup2": true, "pstore": true,
+		"mqueue": true, "hugetlbfs": true, "debugfs": true, "tracefs": true,
+		"securityfs": true, "configfs": true, "fusectl": true, "bpf": true,
+		"efivarfs": true, "squashfs": true, "overlay": true,
+	}
+	var diskUsedBytes, diskTotalBytes uint64
+	parts, err := disk.Partitions(true)
 	if err != nil {
-		return nil, fmt.Errorf("disk: %w", err)
+		return nil, fmt.Errorf("disk partitions: %w", err)
+	}
+	seenDev := map[string]bool{}
+	for _, p := range parts {
+		if virtualFS[p.Fstype] {
+			continue
+		}
+		if seenDev[p.Device] {
+			continue
+		}
+		seenDev[p.Device] = true
+		u, derr := disk.Usage(p.Mountpoint)
+		if derr != nil {
+			continue
+		}
+		diskUsedBytes += u.Used
+		diskTotalBytes += u.Total
 	}
 
 	// Network rate
@@ -118,8 +142,8 @@ func (c *Collector) Collect() (*Stats, error) {
 		LoadAvg:     [3]float64{avg.Load1, avg.Load5, avg.Load15},
 		RAMUsedGB:   float64(vmem.Used) / 1024 / 1024 / 1024,
 		RAMTotalGB:  float64(vmem.Total) / 1024 / 1024 / 1024,
-		DiskUsedGB:  float64(usage.Used) / 1024 / 1024 / 1024,
-		DiskTotalGB: float64(usage.Total) / 1024 / 1024 / 1024,
+		DiskUsedGB:  float64(diskUsedBytes) / 1024 / 1024 / 1024,
+		DiskTotalGB: float64(diskTotalBytes) / 1024 / 1024 / 1024,
 		NetUpMBps:   netUpMBps,
 		NetDownMBps: netDownMBps,
 		UptimeStr:   uptimeStr,

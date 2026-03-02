@@ -19,12 +19,12 @@ import (
 
 const (
 	imgW = 600
-	imgH = 300
+	imgH = 235
 	lx   = 0   // left margin
-	barX = 72  // bar left edge ("CPU" ~3 chars at ~24px each)
+	barX = 90  // bar left edge (fits "NETWORK", 7 chars ≈ 70px)
 	barW = 300 // bar width
 	barH = 14  // bar height
-	vx   = 378 // value text x (barX + barW + 6)
+	vx   = 396 // value text x (barX + barW + 6)
 )
 
 var (
@@ -87,44 +87,44 @@ func Render(s stats.Stats) ([]byte, error) {
 	// 2px orange separator
 	fillRect(img, lx, 24, imgW, 2, accent)
 
-	// ── CPU (y=28) ────────────────────────────────────────────────────
-	drawText(img, "CPU", lx, 42, accent)
-	drawBar(img, barX, 29, barW, barH, s.CPUPercent/100.0)
-	drawText(img, fmt.Sprintf("%.1f%%", s.CPUPercent), vx, 42, textColor)
+	// ── CPU (y=39, +15 gap after separator) ───────────────────────────
+	drawText(img, "CPU", lx, 52, accent)
+	drawBar(img, barX, 39, barW, barH, s.CPUPercent/100.0)
+	drawText(img, fmt.Sprintf("%.1f%%", s.CPUPercent), vx, 52, textColor)
 	loadStr := fmt.Sprintf("%.2f %.2f %.2f", s.LoadAvg[0], s.LoadAvg[1], s.LoadAvg[2])
-	drawTextRight(img, loadStr, imgW, 42, subColor)
+	drawTextRight(img, loadStr, imgW, 52, subColor)
 
-	// ── RAM (y=72) ────────────────────────────────────────────────────
-	drawText(img, "RAM", lx, 87, accent)
+	// ── RAM ───────────────────────────────────────────────────────────
+	drawText(img, "RAM", lx, 97, accent)
 	ramPct := 0.0
 	if s.RAMTotalGB > 0 {
 		ramPct = s.RAMUsedGB / s.RAMTotalGB
 	}
-	drawBar(img, barX, 74, barW, barH, ramPct)
-	drawText(img, fmt.Sprintf("%.1f/%.1fGB", s.RAMUsedGB, s.RAMTotalGB), vx, 87, textColor)
+	drawBar(img, barX, 84, barW, barH, ramPct)
+	drawText(img, fmt.Sprintf("%.1f/%.1fGB", s.RAMUsedGB, s.RAMTotalGB), vx, 97, textColor)
 
-	// ── DISK (y=116) ──────────────────────────────────────────────────
-	drawText(img, "DSK", lx, 131, accent)
+	// ── DISK ──────────────────────────────────────────────────────────
+	drawText(img, "DISK", lx, 141, accent)
 	diskPct := 0.0
 	if s.DiskTotalGB > 0 {
 		diskPct = s.DiskUsedGB / s.DiskTotalGB
 	}
-	drawBar(img, barX, 118, barW, barH, diskPct)
-	drawText(img, fmt.Sprintf("%.0f/%.0fGB", s.DiskUsedGB, s.DiskTotalGB), vx, 131, textColor)
+	drawBar(img, barX, 128, barW, barH, diskPct)
+	drawText(img, fmt.Sprintf("%.0f/%.0fGB", s.DiskUsedGB, s.DiskTotalGB), vx, 141, textColor)
 
-	// ── Dim separator ─────────────────────────────────────────────────
-	fillRect(img, lx, 140, imgW, 1, dimColor)
+	// ── Dim separator (+15 gap after disk) ────────────────────────────
+	fillRect(img, lx, 160, imgW, 1, dimColor)
 
-	// ── NET (y=142) ───────────────────────────────────────────────────
-	drawText(img, "NET", lx, 162, accent)
-	drawTriangleUp(img, barX, 150, green)
-	drawText(img, fmt.Sprintf("%.3f MB/s", s.NetUpMBps), barX+18, 162, textColor)
-	drawTriangleDown(img, barX+195, 150, blue)
-	drawText(img, fmt.Sprintf("%.3f MB/s", s.NetDownMBps), barX+213, 162, textColor)
+	// ── NET ───────────────────────────────────────────────────────────
+	drawText(img, "NETWORK", lx, 182, accent)
+	drawTriangleUp(img, barX, 170, green)
+	drawText(img, fmt.Sprintf("%.3f MB/s", s.NetUpMBps), barX+18, 182, textColor)
+	drawTriangleDown(img, barX+195, 170, blue)
+	drawText(img, fmt.Sprintf("%.3f MB/s", s.NetDownMBps), barX+213, 182, textColor)
 
-	// ── UPTIME (y=188) ────────────────────────────────────────────────
-	drawText(img, "UP", lx, 194, accent)
-	drawText(img, s.UptimeStr, barX, 194, textColor)
+	// ── UPTIME ────────────────────────────────────────────────────────
+	drawText(img, "UPTIME", lx, 214, accent)
+	drawText(img, s.UptimeStr, barX, 214, textColor)
 
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
@@ -176,7 +176,7 @@ func drawTriangleUp(img *image.RGBA, x, y int, clr color.Color) {
 	for row := 0; row < 7; row++ {
 		cx := x + 6
 		for i := -row; i <= row; i++ {
-			img.Set(cx+i, y+(6-row), clr)
+			img.Set(cx+i, y+row, clr) // tip at top (y+0), base at bottom (y+6)
 		}
 	}
 }

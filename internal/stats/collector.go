@@ -109,7 +109,7 @@ func (c *Collector) Collect() (*Stats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("uptime: %w", err)
 	}
-	uptimeStr := formatUptime(uptime)
+	uptimeStr := FormatUptime(uptime)
 
 	return &Stats{
 		Hostname:    hostname,
@@ -126,9 +126,11 @@ func (c *Collector) Collect() (*Stats, error) {
 	}, nil
 }
 
-func formatUptime(seconds uint64) string {
+// FormatUptime formats total seconds as d:hh:mm:ss.
+func FormatUptime(seconds uint64) string {
 	days := seconds / 86400
 	hours := (seconds % 86400) / 3600
 	minutes := (seconds % 3600) / 60
-	return fmt.Sprintf("%dd %dh %dm", days, hours, minutes)
+	secs := seconds % 60
+	return fmt.Sprintf("%d:%02d:%02d:%02d", days, hours, minutes, secs)
 }

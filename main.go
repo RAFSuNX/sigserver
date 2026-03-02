@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -62,6 +67,8 @@ func main() {
 		}
 	}()
 
+	startTunnel(ctx)
+
 	// Wait for shutdown signal
 	<-ctx.Done()
 	log.Println("shutting down...")
@@ -71,4 +78,57 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("shutdown error: %v", err)
 	}
+}
+
+// startTunnel optionally starts cloudflared and prints the forum embed code.
+// If cloudflared is not in PATH it logs a warning and returns immediately.
+func startTunnel(ctx context.Context) {
+	if _, err := exec.LookPath("cloudflared"); err != nil {
+		log.Println("cloudflared not found in PATH — running without tunnel")
+		return
+	}
+
+	cmd := exec.CommandContext(ctx, "cloudflared", "tunnel", "--url", "http://localhost:8080")
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Printf("tunnel pipe: %v", err)
+		return
+	}
+	if err := cmd.Start(); err != nil {
+		log.Printf("tunnel start: %v", err)
+		return
+	}
+	log.Println("cloudflared tunnel starting...")
+
+	go scanTunnelURL(ctx, stderr)
+
+	go func() {
+		if err := cmd.Wait(); err != nil && ctx.Err() == nil {
+			log.Printf("tunnel exited: %v", err)
+		}
+	}()
+}
+
+func scanTunnelURL(_ context.Context, r io.Reader) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.Contains(line, "trycloudflare.com") {
+			continue
+		}
+		for _, field := range strings.Fields(line) {
+			field = strings.Trim(field, "|")
+			if strings.HasPrefix(field, "https://") && strings.Contains(field, "trycloudflare.com") {
+				printEmbedCode(field + "/sig.png")
+				return
+			}
+		}
+	}
+}
+
+func printEmbedCode(url string) {
+	fmt.Println("════════════════════════════════════════")
+	fmt.Println("SYSTEM ONLINE! PASTE THIS INTO YOUR FORUM:")
+	fmt.Printf("[img]%s[/img]\n", url)
+	fmt.Println("════════════════════════════════════════")
 }

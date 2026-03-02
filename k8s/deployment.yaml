@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sigserver
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sigserver
+  template:
+    metadata:
+      labels:
+        app: sigserver
+    spec:
+      hostPID: true
+      hostNetwork: true
+      containers:
+        - name: sigserver
+          image: ghcr.io/rafsunx/sigserver:latest
+          ports:
+            - containerPort: 8080
+              hostPort: 8080
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: proc
+              mountPath: /proc
+              readOnly: true
+            - name: sys
+              mountPath: /sys
+              readOnly: true
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
